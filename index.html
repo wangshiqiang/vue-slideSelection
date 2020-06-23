@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org" xmlns="http://www.w3.org/1999/html">
+<head>
+  <meta charset="utf-8">
+  <title>滑动选择控件</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1, maximum-scale=1, user-scalable=no" />
+  <link href="favicon.ico" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+  <style>
+    html,body,div,button,ul,li,h3,dl,dt,dd{
+      margin:0;
+      padding: 0;
+    }
+    .drop-main{
+      /*background-color: #f0f0f0;*/
+      margin: 30% 0 0;
+      font-size: 13px;
+      overflow: hidden;
+      padding: 30px 0;
+      position: relative;
+    }
+    .drop-main:before,
+    .drop-main:after{
+      content: '';
+      width: 50px;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      z-index: 1;
+    }
+    .drop-main:before{
+      left: 0;
+      background: linear-gradient(left, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0));
+      background: -webkit-linear-gradient(left, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0));
+    }
+    .drop-main:after{
+      right: 0;
+      background: linear-gradient(right, rgba(255, 255, 255, .9), rgba(255, 255, 255, 0));
+      background: -webkit-linear-gradient(right, rgba(255, 255, 255, .9), rgba(255, 255, 255, 0));
+    }
+    .drop-main .rule-line{
+      height: 36px;
+      width: 2px;
+      position: absolute;
+      left: 50%;
+      bottom: 30px;
+      background-color: #f85252;
+      margin-left: -1px;
+    }
+    .drop-main .slide-box{
+      position: relative;
+      height: 20px;
+    }
+    .drop-main dl{
+      /*margin-left: -20px;*/
+      /*background-color: rgba(0, 35, 244, .5);*/
+      position: absolute;
+      left: 0;
+      top: 0;
+      padding-bottom: 20px;
+      padding-left: 100px;
+    }
+    .drop-main dl:after{
+      display: block;
+      content: '';
+      clear: both;
+      height: 0;
+      visibility: hidden;
+    }
+    .drop-main dl dt,
+    .drop-main dl dd{
+      float: left;
+      width: 1px;
+      height: 12px;
+      background-color: #b2b2b2;
+      margin-left: 9px;
+    }
+    .drop-main dl dt{
+      height: 20px;
+      position: relative;
+    }
+    .drop-main dl dt span{
+      position: absolute;
+      left: -33px;
+      bottom: -20px;
+      width: 66px;
+      text-align: center;
+      color: #999;
+      font-size: 12px;
+      /*background-color: #ff0;*/
+    }
+    .drop-main dl dt.active span{
+      color: #f85252;
+      font-weight: bold;
+    }
+    .drop-main dl dd{
+      margin-top: 8px;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="container" id="app">
+    <div class="drop-main">
+      <div class="slide-box">
+        <dl class="line-list" :style="dlStyle" @touchstart.stop.prevent="touchstart" @touchmove.stop.prevent="touchmove" @touchend.stop.prevent="touchend">
+          <template v-for="(item, index) in dateList">
+            <dt v-if="item" :key="index"><span>{{item}}</span></dt>
+            <dd v-else :key="index"></dd>
+          </template>
+        </dl>
+      </div>
+      <div class="rule-line"></div>
+    </div>
+  </div>
+
+  <script type="text/javascript">
+    var vueOptions = {
+      el: '#app',
+      data: {
+        dateList: ['随时取', null, null, null, null, '1个月', null, null, null, null, '2个月', null, null, null, null, '3个月', null, null, null, null, '4个月', null, null, null, null, '5个月', null, null, null, null, '6个月', null, null, null, null, '7个月', null, null, null, null, '8个月', null, null, null, null, '9个月', null, null, null, null, '10个月', null, null, null, null, '11个月', null, null, null, null, '一年及以上'],
+        winWidth: document.documentElement.clientWidth,
+        selectTerm: 0,
+        listIndex: [],
+        listLeft: null,
+        iMargin: 9, // 刻度之间的间距
+        dropTouch: {
+          currX: null,
+          moveX: null,
+          moveY: null,
+          startX: null,
+          startY: null,
+        }
+      },
+      computed: {
+        dlStyle(){
+          let str = `width: ${this.dateList.length * (1 + this.iMargin)}px;left: ${this.listLeft}px;padding-left:${this.winWidth/2}px;padding-right:${this.winWidth/2}px;`;
+          return str;
+        },
+      },
+      mounted(){
+        this.dateList.forEach((v, i)=>{
+          if (v) {
+            // 窗口宽度/2-(索引值*(间距+标线宽度))-间距-标签左侧padding值
+            this.listIndex.push(this.winWidth/2 - (i * (this.iMargin + 1)) - this.iMargin - this.winWidth/2);
+          }
+        });
+        // console.log(this.listIndex);
+        this.setResult(6);
+      },
+      methods: {
+        touchstart(event){
+          // console.log(event);
+          var tagName = event.target.tagName
+          var touchPros = event.touches[0];
+          var offsetLeft = event.target.offsetLeft;
+          if (tagName == 'DD' || tagName == 'DT') {
+            offsetLeft = event.target.parentNode.offsetLeft;
+          } else if (tagName == 'SPAN') {
+            offsetLeft = event.target.parentNode.parentNode.offsetLeft;
+          }
+          this.dropTouch.startX = touchPros.pageX - offsetLeft;
+          this.dropTouch.currX = event.touches[0].clientX;
+        },
+        touchmove(event){
+          // console.log(event);
+          var touchPros = event.touches[0];
+          this.dropTouch.moveX = touchPros.pageX - this.dropTouch.startX;
+          var fangxiang = false;
+          if (event.touches[0].clientX > this.dropTouch.currX) { // 向右
+            fangxiang = true;
+          }
+          this.setDrop(this.dropTouch.moveX, fangxiang);
+        },
+        touchend(event){
+          var _clientX = parseInt(event.changedTouches[0].clientX),
+              _currX = parseInt(this.dropTouch.currX),
+              _minX = Math.min(_clientX, _currX),
+              _maxX = Math.max(_clientX, _currX);
+          if(_clientX != _currX && _minX != _maxX - 1 && _minX != _maxX -2) { // 如果拖动了
+            this.setResult();
+          }
+        },
+        setDrop(m, fangxiang) {
+          let _pos = this.dateList.length - 1;
+          var currLeft = parseFloat(this.listLeft);
+          if (currLeft >= 0 && fangxiang) {
+            // this.listLeft = 0;
+            // return false;
+          }else if(currLeft >= this.listIndex[0] && fangxiang){ // 如果已到左侧
+            this.listLeft = this.listIndex[0];
+            return false;
+          } else if(currLeft <= this.listIndex[this.listIndex.length-1] && !fangxiang){ // 如果已到右侧
+            this.listLeft = this.listIndex[this.listIndex.length-1];
+            return false;
+          } else if (currLeft <= -(this.iMargin * _pos + _pos) && !fangxiang) { // 总长度 - 标尺父级元素宽度的1/2
+            this.listLeft = -(this.iMargin * _pos + _pos);
+            return false;
+          }else{
+            this.listLeft = m;
+          }
+          this.setActive();
+          // console.log(this.listLeft);
+        },
+        setResult(toPosition){
+          // console.log('=======开始 ', this.listLeft);
+          let __left = 0;
+          if (toPosition != undefined) {
+            __left = this.listIndex[toPosition];
+          }else{
+            __left = this.limit(this.listIndex, this.listLeft);
+          }
+          this.listLeft = __left;
+          this.setActive();
+          // console.log('=======结束 ', this.listLeft);
+          console.log('已选期限：', this.selectTerm);
+        },
+        setActive(){
+          let _index = this.listIndex.indexOf(this.limit(this.listIndex, this.listLeft));
+          let currDt = document.querySelectorAll('.line-list > dt');
+          for(let i = 0; i < currDt.length; i++){
+            currDt[i].className = '';
+          }
+          currDt[_index].className = 'active';
+          this.selectTerm = _index;// 设置已选期限
+        },
+        limit(arr, num){
+          var newArr = [];
+          arr.map(function(x){
+            newArr.push(Math.abs(x - num));// 对数组各个数值求差值
+          });
+          var index = newArr.indexOf(Math.min.apply(null, newArr));// 求最小值的索引
+          return arr[index];
+        },
+      },
+    };
+    
+    var app = new Vue(vueOptions);
+  </script>
+</body>
+</html>
